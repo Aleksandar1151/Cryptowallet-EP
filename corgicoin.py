@@ -114,8 +114,7 @@ class Blockchain:
             transaction_bytes = json.dumps(transaction_data).encode()
             transaction_hash = hashlib.sha256(transaction_bytes).hexdigest()
 
-            # Decrypt the signature using the public key
-            # Implement your decryption logic here
+
 
             # Compare the computed hash with the decrypted signature
             if not self.verify_signature(signature, transaction_hash):
@@ -140,7 +139,7 @@ class Blockchain:
                 return False
             # 3 Check all transactions in blockchain
             if not self.are_transactions_valid():
-                return False
+               return False
             # Update variables
             previous_block = block
             block_index += 1
@@ -174,7 +173,7 @@ class Blockchain:
                 length = response.json()['length']
                 chain = response.json()['chain']
                 # Check chain if it is the longest one and also a valid one
-                if length > max_length and self.is_chain_valid(chain):
+                if length > max_length and chain.is_chain_valid(chain):
                     max_length = length
                     longest_chain = chain
         if longest_chain:
@@ -384,6 +383,8 @@ def replace_chain():
         response = {'message': ' All good. The chain is the largest one.',
                     'actual_chain': blockchain.chain}
     return jsonify(response), 200
+
+
 
 
 # Running the app
