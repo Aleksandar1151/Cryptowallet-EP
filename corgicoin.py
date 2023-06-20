@@ -117,35 +117,6 @@ class Blockchain:
 
         return True
 
-    """
-            testingChain = []
-            testingChain = chain
-    
-            print(chain)
-    
-            for transaction in testingChain.transactions:
-                sender = transaction['sender']
-                receiver = transaction['receiver']
-                amount = transaction['amount']
-                signature = transaction['signature']
-    
-                # Create a hash of the transaction data (sender, receiver, amount)
-                transaction_data = {
-                    'sender': sender,
-                    'receiver': receiver,
-                    'amount': amount
-                }
-    
-                json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
-                text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
-                hash_obj = SHA256.new(text_bytes)
-    
-                # Compare the computed hash with the decrypted signature
-                if not self.verify_signature(signature, hash_obj):
-                    return False
-    
-            return True
-    """
 
     def is_chain_valid(self, chain):
         previous_block = chain[0]
