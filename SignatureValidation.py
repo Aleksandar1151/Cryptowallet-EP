@@ -1,3 +1,5 @@
+import json
+
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 from Cryptodome.Signature import pkcs1_15
@@ -52,9 +54,11 @@ def verify(public_key, data, signature):
     decoded_signature = base64.b64decode(signature)
     try:
         verifier.verify(hash_obj, decoded_signature)
+        print("valid")
         return True
     except (ValueError, TypeError):
         return False
+
 
 
 # Generate RSA keys
@@ -70,18 +74,27 @@ public_key = read_key_from_file('NewKeys/public2.pem')
 
 # Encrypt and decrypt
 text = "Hello Srikanth!"
-text_bytes = text.encode('utf-8')
+#text_bytes = text.encode('utf-8')
+#hash_obj = SHA256.new(text_bytes)
+
+transaction_data = {
+    'sender': "sender",
+    'receiver': "receiver",
+    'amount': "amount"
+}
+json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
+text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
 hash_obj = SHA256.new(text_bytes)
 
 encrypted_text = encrypt(public_key, hash_obj.digest())
 decrypted_text = decrypt(private_key, encrypted_text)
 
-print("Original text:", text)
-print("Decrypted text:", decrypted_text)
+#print("Original text:", text)
+#print("Decrypted text:", decrypted_text)
 
 # Sign and verify
 signature = sign(private_key, hash_obj.digest())
 is_verified = verify(public_key, hash_obj.digest(), signature)
 
-print("Signature:", signature)
-print("Verification:", is_verified)
+#print("Signature:", signature)
+#print("Verification:", is_verified)

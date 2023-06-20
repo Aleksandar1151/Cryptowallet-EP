@@ -1,7 +1,11 @@
+import base64
 import datetime
 import hashlib
 import json
 import os
+
+from Cryptodome.Hash import SHA256
+
 import SignatureValidation
 
 from cryptography.exceptions import InvalidSignature
@@ -83,30 +87,65 @@ class Blockchain:
 
         return SignatureValidation.verify(public_key_ser,data,signature)
 
-    def are_transactions_valid(self):
+    def are_transactions_valid(self, chain):
 
-        for transaction in self.transactions:
-            sender = transaction['sender']
-            receiver = transaction['receiver']
-            amount = transaction['amount']
-            signature = transaction['signature']
+        for block in chain:
+            transactions = block['transactions']
+            for transaction in transactions:
+                sender = transaction['sender']
+                receiver = transaction['receiver']
+                amount = transaction['amount']
+                signature_base64 = transaction['signature']
 
-            # Create a hash of the transaction data (sender, receiver, amount)
-            transaction_data = {
-                'sender': sender,
-                'receiver': receiver,
-                'amount': amount
-            }
-            transaction_bytes = json.dumps(transaction_data).encode()
-            transaction_hash = hashlib.sha256(transaction_bytes).hexdigest()
+                signature = base64.b64decode(signature_base64)
 
+                # Create a hash of the transaction data (sender, receiver, amount)
+                transaction_data = {
+                    'sender': sender,
+                    'receiver': receiver,
+                    'amount': amount
+                }
 
+                json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
+                text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
+                hash_obj = SHA256.new(text_bytes)
 
-            # Compare the computed hash with the decrypted signature
-            if not self.verify_signature(signature, transaction_hash):
-                return False
+                # Compare the computed hash with the decrypted signature
+                if not self.verify_signature(signature, hash_obj.digest()):
+                    print("signature false")
+                    return False
 
         return True
+
+    """
+            testingChain = []
+            testingChain = chain
+    
+            print(chain)
+    
+            for transaction in testingChain.transactions:
+                sender = transaction['sender']
+                receiver = transaction['receiver']
+                amount = transaction['amount']
+                signature = transaction['signature']
+    
+                # Create a hash of the transaction data (sender, receiver, amount)
+                transaction_data = {
+                    'sender': sender,
+                    'receiver': receiver,
+                    'amount': amount
+                }
+    
+                json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
+                text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
+                hash_obj = SHA256.new(text_bytes)
+    
+                # Compare the computed hash with the decrypted signature
+                if not self.verify_signature(signature, hash_obj):
+                    return False
+    
+            return True
+    """
 
     def is_chain_valid(self, chain):
         previous_block = chain[0]
@@ -124,7 +163,7 @@ class Blockchain:
             if hash_operation[:len(config.LEADING_ZEROS)] != config.LEADING_ZEROS:
                 return False
             # 3 Check all transactions in blockchain
-            if not self.are_transactions_valid():
+            if not self.are_transactions_valid(chain):
                return False
             # Update variables
             previous_block = block
@@ -159,7 +198,7 @@ class Blockchain:
                 length = response.json()['length']
                 chain = response.json()['chain']
                 # Check chain if it is the longest one and also a valid one
-                if length > max_length and chain.is_chain_valid(chain):
+                if length > max_length and self.are_transactions_valid(chain):
                     max_length = length
                     longest_chain = chain
         if longest_chain:
@@ -174,21 +213,9 @@ def load_private_key():
     private_key = None
 
     if port == '5000':
-        # Load the serialized private key from the "Keys" folder
-        private_key_path = os.path.join("Keys", "node1_private_key.pem")
-        with open(private_key_path, "rb") as f:
-            private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None
-            )
+        private_key = SignatureValidation.read_key_from_file('NewKeys/private1.pem')
     elif port == '5001':
-        # Load the serialized private key from the "Keys" folder
-        private_key_path = os.path.join("Keys", "node2_private_key.pem")
-        with open(private_key_path, "rb") as f:
-            private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None
-            )
+        private_key = SignatureValidation.read_key_from_file('NewKeys/private2.pem')
     return private_key
 
 
@@ -233,28 +260,17 @@ def mine_block():
         'receiver': 'Zelimir',
         'amount': 1
     }
-    transaction_bytes = json.dumps(transaction_data).encode()
 
-    # Load the private key
+    json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
+    text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
+    hash_obj = SHA256.new(text_bytes)
+
     private_key = load_private_key()
-    print("private key:" + str(private_key))
-    # Create a hash code of the transaction
-    hash_algorithm = hashes.SHA256()
-    hash_code = hashes.Hash(hash_algorithm)
-    hash_code.update(transaction_bytes)
-    digest = hash_code.finalize()
+    signature = SignatureValidation.sign(private_key, hash_obj.digest())
 
-    # Encrypt the hash code with the private key
-    signature = private_key.sign(
-        digest,
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        hashes.SHA256()
-    )
-    signature_str = signature.hex()
-    blockchain.add_transaction(sender=node_address, receiver='Zelimir', amount=1, signature=signature_str)
+    signature_base64 = base64.b64encode(signature).decode('utf-8')
+
+    blockchain.add_transaction(sender=node_address, receiver='Zelimir', amount=1, signature=signature_base64)
     # Generate a response as a dictionary
     response = {'message': 'Congratulations! You have just mined a block!',
                 'index': block['index'],
