@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import os
+import SignatureValidation
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization, hashes
@@ -73,29 +74,14 @@ class Blockchain:
         return hashlib.sha256(encoded_block).hexdigest()
 
     def verify_signature(self, signature, data):
-
         public_key_ser = None
 
         if port == '5000':
-            with open("Keys/node2_public_key.pem", 'rb') as file:
-                public_key_ser = file.read()
+            public_key_ser = SignatureValidation.read_key_from_file('NewKeys/public2.pem')
         elif port == '5001':
-            with open("Keys/node1_public_key.pem", 'rb') as file:
-                public_key_ser = file.read()
+            public_key_ser = SignatureValidation.read_key_from_file('NewKeys/public1.pem')
 
-        # Deserialize the public key
-        public_key = serialization.load_pem_public_key(public_key_ser)
-
-        try:
-            public_key.verify(
-                signature,
-                data,
-                padding.PKCS1v15(),
-                algorithm=hashes.SHA256()
-            )
-            return True
-        except InvalidSignature:
-            return False
+        return SignatureValidation.verify(public_key_ser,data,signature)
 
     def are_transactions_valid(self):
 
