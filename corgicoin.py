@@ -20,7 +20,7 @@ from flask import Flask, jsonify, request
 from uuid import uuid4
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
-port = None
+port = "5000"
 
 
 class Blockchain:
@@ -181,8 +181,10 @@ class Blockchain:
 
 
 def load_private_key():
+    global port
     private_key = None
 
+    print("port",port)
     if port == '5000':
         private_key = SignatureValidation.read_key_from_file('NewKeys/private1.pem')
     elif port == '5001':
@@ -207,11 +209,24 @@ elif port == "5001":
     with open("Keys/node2_public_hash.txt", "r") as file:
         node_address = file.read().strip()
 
+print("nodeadress", node_address)
 # Create a Blockchain
 blockchain = Blockchain()
 
+@app.route('/', methods=['GET'])
+def homepage():
+    global node_address, port
+    port = request.environ.get('SERVER_PORT')
+    if port == "5000":
+        with open("Keys/node1_public_hash.txt", "r") as file:
+            node_address = file.read().strip()
+    elif port == "5001":
+        with open("Keys/node2_public_hash.txt", "r") as file:
+            node_address = file.read().strip()
 
-# Minig a block
+    return "Aleksandar Jovanovic - Cryptowallet - EP - port: " + port
+
+# Mine a block
 @app.route('/mine-block', methods=['GET'])
 def mine_block():
     global port
@@ -285,39 +300,32 @@ def is_blockchain_valid():
 @app.route('/add-transaction', methods=['POST'])
 def add_transaction():
     global port
-    port = request.environ.get('SERVER_PORT')
     # Get the JSON file posted in Postman, or by calling this endpoint
-    json = request.get_json()
+    transaction_json  = request.get_json()
 
     # Check all the keys in the received JSON
     transaction_keys = ['sender', 'receiver', 'amount']
-    if not all(key in json for key in transaction_keys):
+    if not all(key in transaction_json for key in transaction_keys):
         return 'ERROR: Some elements of the transaction JSON are missing!', 400  # Bad Request code
 
-    # Load the private key
+    transaction_data = {
+        'sender': transaction_json['sender'],
+        'receiver': transaction_json['receiver'],
+        'amount': transaction_json['amount']
+    }
+
+    json_data = json.dumps(transaction_data)  # Convert dictionary to JSON string
+    text_bytes = json_data.encode('utf-8')  # Convert JSON string to bytes
+    hash_obj = SHA256.new(text_bytes)
+
     private_key = load_private_key()
+    print(private_key)
+    signature = SignatureValidation.sign(private_key, hash_obj.digest())
 
-    # Convert the JSON to bytes for hashing
-    transaction_bytes = json.dumps(json).encode()
-
-    # Create a hash code of the transaction
-    hash_algorithm = hashes.SHA256()
-    hash_code = hashes.Hash(hash_algorithm)
-    hash_code.update(transaction_bytes)
-    digest = hash_code.finalize()
-
-    # Encrypt the hash code with the private key
-    signature = private_key.sign(
-        digest,
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        hashes.SHA256()
-    )
+    signature_base64 = base64.b64encode(signature).decode('utf-8')
 
     # Add transaction to the next block,
-    index = blockchain.add_transaction(json['sender'], json['receiver'], json['amount'], signature)
+    index = blockchain.add_transaction(transaction_json['sender'], transaction_json['receiver'], transaction_json['amount'], signature_base64)
     response = {'message': f'This transaction will be added to block {index}'}
     return jsonify(response), 201  # Created code
 
@@ -363,3 +371,5 @@ def replace_chain():
 # Running the app
 if __name__ == "__main__":
     app.run(host=config.HOST, port=config.PORT)
+    port = request.environ.get('SERVER_PORT')
+    print("starting...")

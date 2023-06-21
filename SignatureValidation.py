@@ -54,7 +54,6 @@ def verify(public_key, data, signature):
     decoded_signature = base64.b64decode(signature)
     try:
         verifier.verify(hash_obj, decoded_signature)
-        print("valid")
         return True
     except (ValueError, TypeError):
         return False
