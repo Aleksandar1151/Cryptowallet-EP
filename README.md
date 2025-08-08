@@ -32,3 +32,48 @@ Then install the dependencies:
 ```
 pip install -r requirements.txt
 ```
+
+## Configuration
+In config.py you can set the host IP address, the port, and the mining difficulty (the number of leading zeros).
+If you are using the version with digital signatures, you need to generate RSA keys and store them in the Keys folder.
+
+## Running the nodes
+Each node needs to be started in a separate terminal. For example:</br>
+
+Terminal 1:
+```
+python3 corgicoin_node_5001.py
+```
+Terminal 2:
+```
+python3 corgicoin_node_5002.py
+```
+Terminal 3:
+```
+python3 corgicoin_node_5003.py
+```
+## Connecting nodes
+Once the nodes are running, you can connect them by sending a POST request. For example, to connect the node running on port 5001 to the other two:
+```
+curl -X POST http://127.0.0.1:5001/connect-node \
+     -H "Content-Type: application/json" \
+     -d '{"nodes": ["http://127.0.0.1:5002", "http://127.0.0.1:5003"]}'
+```
+## API routes
+The application provides several main routes:
+- /mine-block – mines a new block and adds it to the chain
+- /get-chain – returns the full blockchain
+- /is-valid – checks if the blockchain is valid
+- /add-transaction – adds a new transaction
+- /connect-node – connects the current node to other nodes
+- /replace-chain – replaces the chain with the longest one in the network
+
+## Example usage
+If you want to mine a block on the node running on port 5002:
+```
+curl http://127.0.0.1:5002/mine-block
+```
+Then on the node running on port 5001, you can fetch and replace the chain with:
+```
+curl http://127.0.0.1:5001/replace-chain
+```
