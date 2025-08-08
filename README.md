@@ -77,3 +77,8 @@ Then on the node running on port 5001, you can fetch and replace the chain with:
 ```
 curl http://127.0.0.1:5001/replace-chain
 ```
+
+## Possible issues
+If you get an error saying Flask is not found, install it with pip install flask.
+If a port is already in use, either change the port in the code or stop the process that is using it.
+If the Keys folder is missing required key files, generate them before running the nodes.
